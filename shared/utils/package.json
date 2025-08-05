@@ -1,0 +1,22 @@
+{
+  "name": "shared-utils",
+  "version": "1.0.0",
+  "description": "Shared utilities for microservices platform",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/jsonwebtoken": "^9.0.0"
+  },
+  "dependencies": {
+    "shared-types": "workspace:*",
+    "pino": "^8.16.0",
+    "jsonwebtoken": "^9.0.0",
+    "zod": "^3.22.0"
+  }
+}
