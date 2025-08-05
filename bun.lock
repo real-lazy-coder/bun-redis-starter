@@ -69,6 +69,42 @@
         "typescript": "^5.0.0",
       },
     },
+    "services/integration": {
+      "name": "integration-service",
+      "version": "1.0.0",
+      "dependencies": {
+        "drizzle-kit": "^0.20.0",
+        "drizzle-orm": "^0.29.0",
+        "hono": "^3.12.0",
+        "pino": "^8.16.0",
+        "pino-pretty": "^10.2.0",
+        "redis": "^4.6.0",
+        "shared-middleware": "workspace:*",
+        "shared-types": "workspace:*",
+        "shared-utils": "workspace:*",
+        "zod": "^3.22.0",
+      },
+      "devDependencies": {
+        "typescript": "^5.0.0",
+      },
+    },
+    "services/notification": {
+      "name": "notification-service",
+      "version": "1.0.0",
+      "dependencies": {
+        "hono": "^3.12.0",
+        "pino": "^8.16.0",
+        "pino-pretty": "^10.2.0",
+        "redis": "^4.6.0",
+        "shared-middleware": "workspace:*",
+        "shared-types": "workspace:*",
+        "shared-utils": "workspace:*",
+        "zod": "^3.22.0",
+      },
+      "devDependencies": {
+        "typescript": "^5.0.0",
+      },
+    },
     "services/processing": {
       "name": "processing-service",
       "version": "1.0.0",
@@ -572,6 +608,8 @@
 
     "ini": ["ini@1.3.8", "", {}, "sha512-JV/yugV2uzW5iMRSiZAyDtQd+nxtUnjeLt0acNdw98kKLrvuRVyB80tsREOE7yvGVgalhZ6RNXCmEHkUKBKxew=="],
 
+    "integration-service": ["integration-service@workspace:services/integration"],
+
     "ip-address": ["ip-address@9.0.5", "", { "dependencies": { "jsbn": "1.1.0", "sprintf-js": "^1.1.3" } }, "sha512-zHtQzGojZXTwZTHQqra+ETKd4Sn3vgi7uBmlPoXVWZqYvuKmtI0l/VZTjqGmJY9x88GGOaZ9+G9ES8hC4T4X8g=="],
 
     "is-binary-path": ["is-binary-path@2.1.0", "", { "dependencies": { "binary-extensions": "^2.0.0" } }, "sha512-ZMERYes6pDydyuGidse7OsHxtbI7WVeUEozgR/g7rd0xUimYNlvZRE/K2MgZTjWy725IfelLeVcEM97mmtRGXw=="],
@@ -689,6 +727,8 @@
     "nopt": ["nopt@5.0.0", "", { "dependencies": { "abbrev": "1" }, "bin": { "nopt": "bin/nopt.js" } }, "sha512-Tbj67rffqceeLpcRXrT7vKAN8CwfPeIBgM7E6iBkmKLV7bEMwpGgYLGv0jACUsECaa/vuxP0IjEont6umdMgtQ=="],
 
     "normalize-path": ["normalize-path@3.0.0", "", {}, "sha512-6eZs5Ls3WtCisHWp9S2GUy8dqkpGi4BVSz3GaqiE6ezub0512ESztXUwUB6C6IKbQkY2Pnb/mD4WYojCRwcwLA=="],
+
+    "notification-service": ["notification-service@workspace:services/notification"],
 
     "npmlog": ["npmlog@5.0.1", "", { "dependencies": { "are-we-there-yet": "^2.0.0", "console-control-strings": "^1.1.0", "gauge": "^3.0.0", "set-blocking": "^2.0.0" } }, "sha512-AqZtDUWOMKs1G/8lwylVjrdYgqA4d9nu8hc+0gzRxlDb1I10+FHBGMXs6aiQHFdCUUlqH99MUMuLfzWDNDtfxw=="],
 
