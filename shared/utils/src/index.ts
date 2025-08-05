@@ -207,3 +207,6 @@ export const omit = <T extends Record<string, any>, K extends keyof T>(
   }
   return result;
 };
+
+// Export event bus
+export * from './eventBus';
