@@ -1,6 +1,7 @@
-import { eq, and, gt } from 'drizzle-orm';
+import { eq, and, lt, gt } from 'drizzle-orm';
 import crypto from 'crypto';
 import bcrypt from 'bcrypt';
+import { sql } from 'drizzle-orm';
 import { 
   db, 
   apiKeys, 
@@ -118,7 +119,7 @@ export class ApiKeyService {
             valid: true,
             keyData: key,
             userId: key.userId || undefined,
-            permissions: key.permissions,
+            permissions: key.permissions || [],
           };
         }
       }
@@ -135,7 +136,7 @@ export class ApiKeyService {
     await db.update(apiKeys)
       .set({ 
         lastUsedAt: new Date().toISOString(),
-        usageCount: apiKeys.usageCount + 1,
+        usageCount: sql`${apiKeys.usageCount} + 1`,
         updatedAt: new Date().toISOString(),
       })
       .where(eq(apiKeys.id, keyId));
@@ -293,7 +294,7 @@ export class ApiKeyService {
           totalUsage: key.usageCount || 0,
           lastUsed: key.lastUsedAt || undefined,
           createdAt: key.createdAt,
-          isActive: key.isActive,
+          isActive: key.isActive || false,
           daysUntilExpiry,
         },
       };

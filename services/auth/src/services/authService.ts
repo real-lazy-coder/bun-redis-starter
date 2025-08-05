@@ -1,4 +1,4 @@
-import { eq, and, lt, gt } from 'drizzle-orm';
+import { eq, and, lt, gt, sql } from 'drizzle-orm';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { 
@@ -269,7 +269,7 @@ export class AuthService {
     await db.update(users)
       .set({ 
         lastLoginAt: new Date().toISOString(),
-        loginCount: users.loginCount + 1,
+        loginCount: sql`${users.loginCount} + 1`,
         updatedAt: new Date().toISOString(),
       })
       .where(eq(users.id, userId));
