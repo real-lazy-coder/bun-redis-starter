@@ -1,0 +1,27 @@
+{
+  "name": "data-service",
+  "version": "1.0.0",
+  "description": "Data management service for microservices platform",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "start": "bun src/index.ts",
+    "build": "tsc",
+    "test": "bun test",
+    "db:migrate": "drizzle-kit push"
+  },
+  "dependencies": {
+    "hono": "^3.12.0",
+    "drizzle-orm": "^0.29.0",
+    "drizzle-kit": "^0.20.0",
+    "pino": "^8.16.0",
+    "pino-pretty": "^10.2.0",
+    "zod": "^3.22.0",
+    "redis": "^4.6.0",
+    "jsonwebtoken": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.0",
+    "typescript": "^5.0.0"
+  }
+}
