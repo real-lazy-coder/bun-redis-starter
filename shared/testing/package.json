@@ -1,0 +1,20 @@
+{
+  "name": "shared-testing",
+  "version": "1.0.0",
+  "description": "Shared testing utilities for microservices platform",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/bun": "latest"
+  },
+  "dependencies": {
+    "shared-types": "workspace:*",
+    "shared-utils": "workspace:*"
+  }
+}
