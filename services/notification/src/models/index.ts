@@ -2,7 +2,7 @@ import { createClient } from 'redis';
 import config from '../config';
 
 // Simple in-memory storage for notifications (Redis would be better for production)
-interface NotificationTemplate {
+export interface NotificationTemplate {
   id: string;
   name: string;
   type: 'email' | 'sms' | 'push';
@@ -15,7 +15,7 @@ interface NotificationTemplate {
   updatedAt: string;
 }
 
-interface NotificationHistory {
+export interface NotificationHistory {
   id: string;
   type: 'email' | 'sms' | 'push';
   to: string | string[];
@@ -29,7 +29,7 @@ interface NotificationHistory {
   createdAt: string;
 }
 
-interface NotificationPreference {
+export interface NotificationPreference {
   userId: string;
   email: {
     enabled: boolean;
@@ -179,7 +179,7 @@ export class NotificationStorage {
     type?: string
   ): Promise<NotificationHistory[]> {
     await this.connect();
-    const ids = await this.redisClient.zRevRange('notifications:timeline', offset, offset + limit - 1);
+    const ids = await this.redisClient.zRange('notifications:timeline', offset, offset + limit - 1, { REV: true });
     const notifications: NotificationHistory[] = [];
 
     for (const id of ids) {

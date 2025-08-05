@@ -81,7 +81,7 @@ const config: ServiceConfig = {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID,
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
         // Mailgun configuration
-        apiKey: process.env.MAILGUN_API_KEY,
+        mailgunApiKey: process.env.MAILGUN_API_KEY,
         domain: process.env.MAILGUN_DOMAIN,
       },
     },
