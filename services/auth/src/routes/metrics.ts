@@ -1,41 +1,22 @@
 import { Hono } from 'hono';
 import type { Context } from 'hono';
 import config from '../config';
+import { getServiceMetrics, getPrometheusMetrics } from 'shared-monitoring';
 
 const metrics = new Hono();
 
-// Basic metrics endpoint
+// JSON metrics endpoint
 metrics.get('/', async (c: Context) => {
   try {
-    const uptime = process.uptime();
-    const memoryUsage = process.memoryUsage();
+    const serviceMetrics = await getServiceMetrics();
     
-    const serviceMetrics = {
+    const response = {
       service: config.name,
       version: config.version,
-      uptime: Math.floor(uptime),
-      requests: {
-        total: 0, // TODO: Implement request counter
-        perSecond: 0, // TODO: Implement rate calculation
-        averageResponseTime: 0, // TODO: Implement response time tracking
-      },
-      memory: {
-        used: memoryUsage.heapUsed,
-        total: memoryUsage.heapTotal,
-        percentage: Math.round((memoryUsage.heapUsed / memoryUsage.heapTotal) * 100),
-      },
-      cpu: {
-        percentage: 0, // TODO: Implement CPU usage tracking
-      },
-      database: {
-        connections: 1, // SQLite connection
-        queries: 0, // TODO: Implement query counter
-        averageQueryTime: 0, // TODO: Implement query time tracking
-      },
-      timestamp: new Date().toISOString(),
+      ...serviceMetrics,
     };
 
-    return c.json(serviceMetrics);
+    return c.json(response);
   } catch (error) {
     const logger = (c as any).logger;
     logger.error(error, 'Metrics error');
@@ -44,6 +25,21 @@ metrics.get('/', async (c: Context) => {
       error: 'Failed to collect metrics',
       timestamp: new Date().toISOString()
     }, 500);
+  }
+});
+
+// Prometheus metrics endpoint
+metrics.get('/prometheus', async (c: Context) => {
+  try {
+    const prometheusMetrics = await getPrometheusMetrics();
+    
+    c.header('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
+    return c.text(prometheusMetrics);
+  } catch (error) {
+    const logger = (c as any).logger;
+    logger.error(error, 'Prometheus metrics error');
+    
+    return c.text('# Error collecting metrics\n', 500);
   }
 });
 

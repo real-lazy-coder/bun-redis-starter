@@ -101,6 +101,39 @@ export const cors = (options: {
   };
 };
 
+// Production security headers middleware
+export const securityHeaders = () => {
+  return async (c: Context, next: Next) => {
+    // Security headers for production
+    c.res.headers.set('X-Frame-Options', 'DENY');
+    c.res.headers.set('X-Content-Type-Options', 'nosniff');
+    c.res.headers.set('X-XSS-Protection', '1; mode=block');
+    c.res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+    c.res.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+    
+    // Content Security Policy
+    const csp = [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: https:",
+      "font-src 'self'",
+      "connect-src 'self'",
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+      "form-action 'self'"
+    ].join('; ');
+    c.res.headers.set('Content-Security-Policy', csp);
+    
+    // HSTS in production
+    if (process.env.NODE_ENV === 'production') {
+      c.res.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+    }
+    
+    await next();
+  };
+};
+
 // JWT Authentication middleware
 export const jwtAuth = (secret: string, options: { optional?: boolean } = {}) => {
   return async (c: Context, next: Next) => {
@@ -176,36 +209,95 @@ export const validateQuery = <T>(schema: any) => {
   };
 };
 
-// Rate limiting middleware (simple in-memory implementation)
-const requestCounts = new Map<string, { count: number; resetTime: number }>();
+// Enhanced rate limiting middleware with Redis support
+interface RateLimitStore {
+  get(key: string): Promise<{ count: number; resetTime: number } | null>;
+  set(key: string, value: { count: number; resetTime: number }, ttl: number): Promise<void>;
+}
+
+// In-memory fallback store
+class MemoryRateLimitStore implements RateLimitStore {
+  private store = new Map<string, { count: number; resetTime: number }>();
+
+  async get(key: string) {
+    const record = this.store.get(key);
+    if (!record || Date.now() > record.resetTime) {
+      this.store.delete(key);
+      return null;
+    }
+    return record;
+  }
+
+  async set(key: string, value: { count: number; resetTime: number }, ttl: number) {
+    this.store.set(key, value);
+    // Cleanup expired entries
+    setTimeout(() => {
+      const record = this.store.get(key);
+      if (record && Date.now() > record.resetTime) {
+        this.store.delete(key);
+      }
+    }, ttl);
+  }
+}
+
+const defaultStore = new MemoryRateLimitStore();
 
 export const rateLimit = (options: {
   windowMs: number;
   maxRequests: number;
   keyGenerator?: (c: Context) => string;
+  store?: RateLimitStore;
+  skipSuccessfulRequests?: boolean;
+  skipFailedRequests?: boolean;
 }) => {
-  const { windowMs, maxRequests, keyGenerator = (c) => c.req.header('x-forwarded-for') || c.req.header('x-real-ip') || 'unknown' } = options;
+  const {
+    windowMs,
+    maxRequests,
+    keyGenerator = (c) => c.req.header('x-forwarded-for') || c.req.header('x-real-ip') || 'unknown',
+    store = defaultStore,
+    skipSuccessfulRequests = false,
+    skipFailedRequests = false
+  } = options;
 
   return async (c: Context, next: Next) => {
-    const key = keyGenerator(c);
+    const key = `rate_limit:${keyGenerator(c)}`;
     const now = Date.now();
     
-    const record = requestCounts.get(key);
+    let record = await store.get(key);
     
     if (!record || now > record.resetTime) {
-      requestCounts.set(key, {
-        count: 1,
+      record = {
+        count: 0,
         resetTime: now + windowMs,
-      });
-      return await next();
+      };
     }
 
     if (record.count >= maxRequests) {
+      c.res.headers.set('X-RateLimit-Limit', maxRequests.toString());
+      c.res.headers.set('X-RateLimit-Remaining', '0');
+      c.res.headers.set('X-RateLimit-Reset', Math.ceil(record.resetTime / 1000).toString());
+      
       return c.json(createErrorResponse('Too many requests'), 429);
     }
 
-    record.count++;
+    // Execute the request
     await next();
+
+    // Check if we should count this request
+    const shouldCount = !(
+      (skipSuccessfulRequests && c.res.status < 400) ||
+      (skipFailedRequests && c.res.status >= 400)
+    );
+
+    if (shouldCount) {
+      record.count++;
+      await store.set(key, record, windowMs);
+    }
+
+    // Set rate limit headers
+    c.res.headers.set('X-RateLimit-Limit', maxRequests.toString());
+    c.res.headers.set('X-RateLimit-Remaining', Math.max(maxRequests - record.count, 0).toString());
+    c.res.headers.set('X-RateLimit-Reset', Math.ceil(record.resetTime / 1000).toString());
   };
 };
 
@@ -237,5 +329,50 @@ export const timeout = (ms: number) => {
       }
       throw error;
     }
+  };
+};
+
+// Input sanitization middleware
+export const sanitizeInput = () => {
+  return async (c: Context, next: Next) => {
+    // Basic XSS protection - strip potentially dangerous characters
+    const sanitizeString = (str: string): string => {
+      return str
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+        .replace(/<[^>]+>/g, '')
+        .replace(/javascript:/gi, '')
+        .replace(/on\w+\s*=/gi, '');
+    };
+
+    const sanitizeObject = (obj: any): any => {
+      if (typeof obj === 'string') {
+        return sanitizeString(obj);
+      } else if (Array.isArray(obj)) {
+        return obj.map(sanitizeObject);
+      } else if (obj && typeof obj === 'object') {
+        const sanitized: any = {};
+        for (const [key, value] of Object.entries(obj)) {
+          sanitized[key] = sanitizeObject(value);
+        }
+        return sanitized;
+      }
+      return obj;
+    };
+
+    // Sanitize request body if it exists
+    try {
+      const contentType = c.req.header('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const originalJson = c.req.json;
+        c.req.json = async () => {
+          const body = await originalJson.call(c.req);
+          return sanitizeObject(body);
+        };
+      }
+    } catch (error) {
+      // Continue without sanitization if there's an issue
+    }
+
+    await next();
   };
 };
