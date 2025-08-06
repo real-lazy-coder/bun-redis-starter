@@ -4,6 +4,7 @@ import config, { jwtConfig } from './config';
 import authRoutes from './routes/auth';
 import healthRoutes from './routes/health';
 import metricsRoutes from './routes/metrics';
+import { metricsMiddleware } from 'shared-monitoring';
 
 // Initialize logger
 const logger = pino({
@@ -23,6 +24,9 @@ const logger = pino({
 
 // Initialize Hono app
 const app = new Hono();
+
+// Metrics collection middleware (must be first)
+app.use('*', metricsMiddleware());
 
 // Basic middleware
 app.use('*', async (c, next) => {
@@ -72,6 +76,23 @@ app.use('*', async (c, next) => {
   
   if (c.req.method === 'OPTIONS') {
     return c.text('', 204);
+  }
+  
+  await next();
+});
+
+// Security headers middleware
+app.use('*', async (c, next) => {
+  // Security headers for production
+  c.res.headers.set('X-Frame-Options', 'DENY');
+  c.res.headers.set('X-Content-Type-Options', 'nosniff');
+  c.res.headers.set('X-XSS-Protection', '1; mode=block');
+  c.res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  c.res.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  
+  // HSTS in production
+  if (process.env.NODE_ENV === 'production') {
+    c.res.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
   }
   
   await next();
